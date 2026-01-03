@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>EvoShot Test Client</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1a1a2e;
+            color: #eee;
+            padding: 20px;
+        }
+        #log {
+            background: #16213e;
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .sent { color: #00d9ff; }
+        .received { color: #00ff88; }
+        .error { color: #ff6b6b; }
+        .info { color: #ffd93d; }
+        button {
+            background: #4a00e0;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover { background: #6a1be0; }
+        button:disabled { background: #555; }
+        input {
+            padding: 10px;
+            border-radius: 5px;
+            border: none;
+            margin: 5px;
+        }
+        #canvas {
+            background: #0f0f23;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎮 EvoShot Test Client</h1>
+    
+    <div>
+        <input type="text" id="playerName" placeholder="플레이어 이름" value="TestPlayer">
+        <button id="connectBtn" onclick="connect()">Connect</button>
+        <button id="disconnectBtn" onclick="disconnect()" disabled>Disconnect</button>
+    </div>
+    
+    <div id="log"></div>
+    
+    <canvas id="canvas" width="800" height="600"></canvas>
+
+    <script>
+        let ws = null;
+        let playerId = null;
+        let players = {};
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        function log(message, type = 'info') {
+            const div = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            div.innerHTML += `<div class="${type}">[${time}] ${message}</div>`;
+            div.scrollTop = div.scrollHeight;
+        }
+
+        function connect() {
+            const name = document.getElementById('playerName').value || 'Player';
+            ws = new WebSocket('ws://localhost:8080/ws');
+
+            ws.onopen = () => {
+                log('WebSocket 연결됨', 'info');
+                document.getElementById('connectBtn').disabled = true;
+                document.getElementById('disconnectBtn').disabled = false;
+                
+                // Connect 메시지 전송
+                send({ type: 'connect', playerName: name });
+            };
+
+            ws.onmessage = (event) => {
+                const message = JSON.parse(event.data);
+                handleMessage(message);
+            };
+
+            ws.onclose = () => {
+                log('WebSocket 연결 종료', 'error');
+                document.getElementById('connectBtn').disabled = false;
+                document.getElementById('disconnectBtn').disabled = true;
+                ws = null;
+                playerId = null;
+            };
+
+            ws.onerror = (error) => {
+                log('WebSocket 에러: ' + error, 'error');
+            };
+        }
+
+        function disconnect() {
+            if (ws) ws.close();
+        }
+
+        function send(message) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify(message));
+                log('SENT: ' + JSON.stringify(message), 'sent');
+            }
+        }
+
+        function handleMessage(message) {
+            // game_state는 로그 생략 (60fps로 오기 때문)
+            if (message.type !== 'game_state') {
+                log('RECV: ' + JSON.stringify(message), 'received');
+            }
+
+            switch (message.type) {
+                case 'connected':
+                    playerId = message.playerId;
+                    players = {};
+                    message.players.forEach(p => players[p.id] = p);
+                    log(`접속 완료! PlayerId: ${playerId}, 현재 ${message.players.length}명`, 'info');
+                    break;
+
+                case 'player_join':
+                    players[message.player.id] = message.player;
+                    log(`${message.player.name} 입장`, 'info');
+                    break;
+
+                case 'player_leave':
+                    delete players[message.playerId];
+                    log(`${message.playerId} 퇴장`, 'info');
+                    break;
+
+                case 'game_state':
+                    message.players.forEach(p => players[p.id] = p);
+                    break;
+
+                case 'pong':
+                    log(`Pong received (latency: ${Date.now() - message.timestamp}ms)`, 'info');
+                    break;
+            }
+
+            render();
+        }
+
+        function render() {
+            ctx.fillStyle = '#0f0f23';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            Object.values(players).forEach(player => {
+                // 플레이어 원
+                ctx.beginPath();
+                ctx.arc(player.x, player.y, 20, 0, Math.PI * 2);
+                ctx.fillStyle = player.id === playerId ? '#00ff88' : '#ff6b6b';
+                ctx.fill();
+
+                // 이름
+                ctx.fillStyle = '#fff';
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(player.name, player.x, player.y - 30);
+            });
+        }
+
+        // 마우스 이동 시 입력 전송 (throttle: 16ms = 60fps)
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+        let lastSendTime = 0;
+        const SEND_INTERVAL = 16; // 16ms = 약 60fps
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!ws || !playerId) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            lastMouseX = e.clientX - rect.left;
+            lastMouseY = e.clientY - rect.top;
+
+            const now = Date.now();
+            if (now - lastSendTime >= SEND_INTERVAL) {
+                lastSendTime = now;
+                // 로그 없이 전송
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        type: 'player_input',
+                        mouseX: lastMouseX,
+                        mouseY: lastMouseY
+                    }));
+                }
+            }
+        });
+
+        // Ping 테스트
+        setInterval(() => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                send({ type: 'ping', timestamp: Date.now() });
+            }
+        }, 5000);
+
+        render();
+    </script>
+</body>
+</html>
+
