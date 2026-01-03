@@ -75,7 +75,8 @@
 
         function connect() {
             const name = document.getElementById('playerName').value || 'Player';
-            ws = new WebSocket('ws://localhost:8080/ws');
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${window.location.hostname}:8080/ws`);
 
             ws.onopen = () => {
                 log('WebSocket 연결됨', 'info');
