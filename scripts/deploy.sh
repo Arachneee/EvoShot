@@ -2,7 +2,7 @@
 
 APP_NAME="evoshot"
 APP_DIR="/home/ubuntu/app"
-JAR_FILE="$APP_DIR/EvoShot-1.0-SNAPSHOT.jar"
+JAR_FILE="$APP_DIR/EvoShot-1.0-SNAPSHOT-all.jar"
 LOG_FILE="$APP_DIR/app.log"
 
 echo "Stopping existing application..."

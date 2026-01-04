@@ -34,7 +34,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build and Test
-        run: ./gradlew build
+        run: ./gradlew build shadowJar
 
       - name: Upload JAR artifact
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
@@ -69,7 +69,7 @@ jobs:
       - name: Deploy to EC2
         run: |
           scp -i ~/.ssh/deploy_key \
-            build/libs/EvoShot-1.0-SNAPSHOT.jar \
+            build/libs/EvoShot-1.0-SNAPSHOT-all.jar \
             ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/${{ secrets.EC2_USER }}/app/
 
           scp -i ~/.ssh/deploy_key \
