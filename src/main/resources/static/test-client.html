@@ -4,24 +4,24 @@
     <meta charset="UTF-8">
     <title>EvoShot Test Client</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
         body {
             font-family: 'Courier New', monospace;
             background: #1a1a2e;
             color: #eee;
             padding: 20px;
+            min-height: 100vh;
         }
-        #log {
-            background: #16213e;
-            padding: 15px;
-            height: 300px;
-            overflow-y: auto;
-            border-radius: 8px;
-            margin-bottom: 20px;
+        h1 {
+            margin-bottom: 15px;
         }
-        .sent { color: #00d9ff; }
-        .received { color: #00ff88; }
-        .error { color: #ff6b6b; }
-        .info { color: #ffd93d; }
+        .controls {
+            margin-bottom: 15px;
+        }
         button {
             background: #4a00e0;
             color: white;
@@ -42,41 +42,54 @@
         #canvas {
             background: #0f0f23;
             border-radius: 8px;
-            margin-top: 20px;
+            display: block;
+            width: calc(100vw - 40px);
+            height: calc(100vh - 140px);
+            user-select: none;
+            -webkit-user-select: none;
         }
     </style>
 </head>
 <body>
     <h1>🎮 EvoShot Test Client</h1>
     
-    <div>
+    <div class="controls">
         <input type="text" id="playerName" placeholder="플레이어 이름" value="TestPlayer">
         <button id="connectBtn" onclick="connect()">Connect</button>
         <button id="disconnectBtn" onclick="disconnect()" disabled>Disconnect</button>
     </div>
     
-    <div id="log"></div>
-    
-    <canvas id="canvas" width="800" height="600"></canvas>
+    <canvas id="canvas"></canvas>
 
     <script>
+        const SERVER_HOST = window.location.hostname;
+        const SERVER_PORT = 8080;
+        const WS_PATH = '/ws';
+
         let ws = null;
         let playerId = null;
         let players = {};
+        let bullets = [];
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
 
+        function resizeCanvas() {
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+            render();
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
         function log(message, type = 'info') {
-            const div = document.getElementById('log');
             const time = new Date().toLocaleTimeString();
-            div.innerHTML += `<div class="${type}">[${time}] ${message}</div>`;
-            div.scrollTop = div.scrollHeight;
+            console.log(`[${type}] [${time}] ${message}`);
         }
 
         function connect() {
             const name = document.getElementById('playerName').value || 'Player';
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            ws = new WebSocket(`${protocol}//${window.location.hostname}:8080/ws`);
+            ws = new WebSocket(`${protocol}//${SERVER_HOST}:${SERVER_PORT}${WS_PATH}`);
 
             ws.onopen = () => {
                 log('WebSocket 연결됨', 'info');
@@ -142,10 +155,19 @@
 
                 case 'game_state':
                     message.players.forEach(p => players[p.id] = p);
+                    bullets = message.bullet || [];
                     break;
 
                 case 'pong':
                     log(`Pong received (latency: ${Date.now() - message.timestamp}ms)`, 'info');
+                    break;
+
+                case 'player_dead':
+                    log(`죽었습니다! 다시 연결하세요.`, 'error');
+                    alert('💀 죽었습니다! 다시 연결하세요.');
+                    playerId = null;
+                    players = {};
+                    bullets = [];
                     break;
             }
 
@@ -155,6 +177,14 @@
         function render() {
             ctx.fillStyle = '#0f0f23';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 총알 렌더링
+            bullets.forEach(bullet => {
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, 5, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffff00';
+                ctx.fill();
+            });
 
             Object.values(players).forEach(player => {
                 // 플레이어 원
@@ -177,6 +207,17 @@
         let lastSendTime = 0;
         const SEND_INTERVAL = 16; // 16ms = 약 60fps
 
+        function sendPlayerInput(shoot = false) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'player_input',
+                    mouseX: lastMouseX,
+                    mouseY: lastMouseY,
+                    shoot: shoot
+                }));
+            }
+        }
+
         canvas.addEventListener('mousemove', (e) => {
             if (!ws || !playerId) return;
             
@@ -187,16 +228,24 @@
             const now = Date.now();
             if (now - lastSendTime >= SEND_INTERVAL) {
                 lastSendTime = now;
-                // 로그 없이 전송
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({
-                        type: 'player_input',
-                        mouseX: lastMouseX,
-                        mouseY: lastMouseY
-                    }));
-                }
+                sendPlayerInput(false);
             }
         });
+
+        // 마우스 클릭 시 총알 발사
+        canvas.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            if (!ws || !playerId) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            lastMouseX = e.clientX - rect.left;
+            lastMouseY = e.clientY - rect.top;
+
+            sendPlayerInput(true);
+        });
+
+        // 컨텍스트 메뉴 방지
+        canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
         // Ping 테스트
         setInterval(() => {

@@ -1,5 +1,6 @@
 package com.evoshot.core.handler.message
 
+import com.evoshot.core.bullet.Bullet
 import com.evoshot.core.player.PlayerState
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -49,6 +50,7 @@ data class PlayerLeaveMessage(
 data class PlayerInputMessage(
     val mouseX: Float,
     val mouseY: Float,
+    val shoot: Boolean = false,
 ) : GameMessage
 
 @Serializable
@@ -56,6 +58,7 @@ data class PlayerInputMessage(
 data class GameStateMessage(
     val tick: Long,
     val players: List<PlayerState>,
+    val bullet: List<Bullet>,
 ) : GameMessage
 
 @Serializable
@@ -63,4 +66,11 @@ data class GameStateMessage(
 data class ErrorMessage(
     val code: String,
     val message: String,
+) : GameMessage
+
+@Serializable
+@SerialName("player_dead")
+data class PlayerDeadMessage(
+    val playerId: String,
+    val killedByBulletId: String,
 ) : GameMessage

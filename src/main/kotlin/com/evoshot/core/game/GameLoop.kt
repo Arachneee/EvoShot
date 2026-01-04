@@ -48,11 +48,14 @@ class GameLoop(
     private fun tick() {
         val tick = tickCount.incrementAndGet()
 
+        room.play()
+
         if (room.playerCount > 0) {
             val gameState =
                 GameStateMessage(
                     tick = tick,
-                    players = room.getAllPlayerStates(),
+                    players = room.getAlivePlayerStates(),
+                    bullet = room.getAllBullets(),
                 )
             room.broadcast(gameState)
         }

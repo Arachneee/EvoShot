@@ -31,6 +31,10 @@ class Session(
         }
     }
 
+    override fun disconnect() {
+        channel.close()
+    }
+
     fun close() = channel.close()
 
     override fun equals(other: Any?): Boolean {

@@ -1,5 +1,6 @@
 package com.evoshot.core.handler
 
+import com.evoshot.core.bullet.Bullet
 import com.evoshot.core.handler.message.ConnectMessage
 import com.evoshot.core.handler.message.ConnectedMessage
 import com.evoshot.core.handler.message.ErrorMessage
@@ -10,6 +11,7 @@ import com.evoshot.core.handler.message.PlayerJoinMessage
 import com.evoshot.core.handler.message.PongMessage
 import com.evoshot.core.player.Player
 import com.evoshot.core.room.Room
+import java.util.UUID
 
 class GameMessageHandler(
     private val room: Room,
@@ -54,7 +56,7 @@ class GameMessageHandler(
             player.send(
                 ConnectedMessage(
                     playerId = player.playerId,
-                    players = room.getAllPlayerStates(),
+                    players = room.getAlivePlayerStates(),
                 ),
             )
 
@@ -73,6 +75,21 @@ class GameMessageHandler(
     ) {
         room.updatePlayerState(player.playerId) { state ->
             state.move(tx = message.mouseX, ty = message.mouseY)
+        }
+
+        if (message.shoot) {
+            val playerState = room.getPlayerState(player.playerId) ?: return
+
+            val bullet =
+                Bullet.create(
+                    id = UUID.randomUUID().toString(),
+                    x = playerState.x,
+                    y = playerState.y,
+                    tx = message.mouseX,
+                    ty = message.mouseY,
+                )
+
+            room.addBullet(bullet)
         }
     }
 }

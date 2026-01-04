@@ -9,4 +9,6 @@ interface Player {
     fun setPlayerName(name: String)
 
     fun send(message: GameMessage)
+
+    fun disconnect()
 }
