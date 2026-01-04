@@ -68,4 +68,3 @@ class PlayerStateTest {
         assertThat(result.name).isEqualTo("홍길동")
     }
 }
-

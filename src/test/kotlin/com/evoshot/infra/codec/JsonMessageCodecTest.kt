@@ -53,7 +53,7 @@ class JsonMessageCodecTest {
                 PlayerState(id = "1", name = "Player1", x = 10f, y = 20f),
                 PlayerState(id = "2", name = "Player2", x = 30f, y = 40f),
             )
-        val original = GameStateMessage(tick = 100L, players = players)
+        val original = GameStateMessage(tick = 100L, players = players, bullet = emptyList())
 
         val json = codec.encodeToString(original)
         val decoded = codec.decodeFromString(json)

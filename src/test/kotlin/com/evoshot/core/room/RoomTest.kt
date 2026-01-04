@@ -55,8 +55,8 @@ class RoomTest {
         assertThat(state).isNotNull
         assertThat(state!!.id).isEqualTo("player1")
         assertThat(state.name).isEqualTo("홍길동")
-        assertThat(state.x).isBetween(100f, 700f)
-        assertThat(state.y).isBetween(100f, 500f)
+        assertThat(state.x).isBetween(100f, room.width - 100)
+        assertThat(state.y).isBetween(100f, room.height - 100)
     }
 
     @Test
@@ -119,7 +119,7 @@ class RoomTest {
         room.join(createSession("p2", "Player2"))
         room.join(createSession("p3", "Player3"))
 
-        val states = room.getAllPlayerStates()
+        val states = room.getAlivePlayerStates()
 
         assertThat(states).hasSize(3)
     }
