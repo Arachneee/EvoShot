@@ -1,4 +1,4 @@
-package com.evoshot.core.handler.message
+package com.evoshot.core.controller.message
 
 import com.evoshot.core.domain.Bullet
 import com.evoshot.core.domain.PlayerState

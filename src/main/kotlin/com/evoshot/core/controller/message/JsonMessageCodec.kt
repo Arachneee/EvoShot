@@ -1,4 +1,4 @@
-package com.evoshot.core.handler.message
+package com.evoshot.core.controller.message
 
 import kotlinx.serialization.json.Json
 
