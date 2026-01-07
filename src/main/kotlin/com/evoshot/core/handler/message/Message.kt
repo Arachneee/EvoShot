@@ -1,7 +1,7 @@
 package com.evoshot.core.handler.message
 
-import com.evoshot.core.bullet.Bullet
-import com.evoshot.core.player.PlayerState
+import com.evoshot.core.domain.Bullet
+import com.evoshot.core.domain.PlayerState
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 

@@ -1,10 +1,11 @@
-package com.evoshot.infra.codec
+package com.evoshot.core.codec
 
+import com.evoshot.core.domain.PlayerState
 import com.evoshot.core.handler.message.ConnectMessage
 import com.evoshot.core.handler.message.GameStateMessage
+import com.evoshot.core.handler.message.JsonMessageCodec
 import com.evoshot.core.handler.message.PingMessage
 import com.evoshot.core.handler.message.PlayerInputMessage
-import com.evoshot.core.player.PlayerState
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -50,8 +51,8 @@ class JsonMessageCodecTest {
     fun `GameStateMessage를 인코딩하고 디코딩할 수 있다`() {
         val players =
             listOf(
-                PlayerState(id = "1", name = "Player1", x = 10f, y = 20f),
-                PlayerState(id = "2", name = "Player2", x = 30f, y = 40f),
+                PlayerState.createForTest(id = "1", name = "Player1", x = 100f, y = 200f),
+                PlayerState.createForTest(id = "2", name = "Player2", x = 300f, y = 400f),
             )
         val original = GameStateMessage(tick = 100L, players = players, bullet = emptyList())
 
