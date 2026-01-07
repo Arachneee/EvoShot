@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory
 
 class GameServer(
     private val port: Int = 8080,
+    private val sessionManager: SessionManager,
     private val messageHandler: MessageHandler,
 ) {
     private val logger = LoggerFactory.getLogger(GameServer::class.java)
@@ -26,8 +27,6 @@ class GameServer(
     private val serverChannelClass: Class<out ServerSocketChannel> =
         if (useEpoll) EpollServerSocketChannel::class.java else NioServerSocketChannel::class.java
     private var channel: Channel? = null
-
-    val sessionManager = SessionManager()
 
     fun start() {
         logger.info("Using ${if (useEpoll) "Epoll" else "NIO"} transport")

@@ -1,11 +1,11 @@
 package com.evoshot.core.codec
 
+import com.evoshot.core.controller.message.ConnectMessage
+import com.evoshot.core.controller.message.GameStateMessage
+import com.evoshot.core.controller.message.JsonMessageCodec
+import com.evoshot.core.controller.message.PingMessage
+import com.evoshot.core.controller.message.PlayerInputMessage
 import com.evoshot.core.domain.PlayerState
-import com.evoshot.core.handler.message.ConnectMessage
-import com.evoshot.core.handler.message.GameStateMessage
-import com.evoshot.core.handler.message.JsonMessageCodec
-import com.evoshot.core.handler.message.PingMessage
-import com.evoshot.core.handler.message.PlayerInputMessage
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 

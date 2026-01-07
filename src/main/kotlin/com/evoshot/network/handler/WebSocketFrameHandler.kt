@@ -19,13 +19,13 @@ class WebSocketFrameHandler(
     override fun channelActive(ctx: ChannelHandlerContext) {
         val session = sessionManager.createSession(ctx.channel())
         logger.info("New connection: sessionId=${session.id}, total=${sessionManager.sessionCount}")
-        messageHandler.onConnect(session)
+        messageHandler.onConnect(session.id)
     }
 
     override fun channelInactive(ctx: ChannelHandlerContext) {
         val session = sessionManager.removeSession(ctx.channel())
         session?.let {
-            messageHandler.onDisconnect(it)
+            messageHandler.onDisconnect(it.id)
             logger.info("Connection closed: sessionId=${it.id}, total=${sessionManager.sessionCount}")
         }
     }
@@ -56,7 +56,7 @@ class WebSocketFrameHandler(
         frame: TextWebSocketFrame,
     ) {
         val session = sessionManager.getSession(ctx.channel()) ?: return
-        messageHandler.onMessage(session, frame.text())
+        messageHandler.onMessage(session.id, frame.text())
     }
 
     override fun exceptionCaught(
@@ -67,4 +67,3 @@ class WebSocketFrameHandler(
         ctx.close()
     }
 }
-
