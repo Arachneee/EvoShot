@@ -1,4 +1,4 @@
-package com.evoshot.infra.server
+package com.evoshot.network.server
 
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.Channel
@@ -43,4 +43,3 @@ class StaticFileServer(
         logger.info("Static file server stopped")
     }
 }
-

@@ -1,39 +1,45 @@
-package com.evoshot.infra.server
+package com.evoshot.network.server
 
-import com.evoshot.core.room.Room
-import com.evoshot.infra.codec.JsonMessageCodec
-import com.evoshot.infra.codec.MessageCodec
-import com.evoshot.infra.session.SessionManager
+import com.evoshot.network.handler.MessageHandler
+import com.evoshot.network.session.SessionManager
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.Channel
 import io.netty.channel.ChannelOption
+import io.netty.channel.EventLoopGroup
+import io.netty.channel.epoll.Epoll
+import io.netty.channel.epoll.EpollEventLoopGroup
+import io.netty.channel.epoll.EpollServerSocketChannel
 import io.netty.channel.nio.NioEventLoopGroup
+import io.netty.channel.socket.ServerSocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import org.slf4j.LoggerFactory
 
 class GameServer(
     private val port: Int = 8080,
-    private val codec: MessageCodec = JsonMessageCodec(),
+    private val messageHandler: MessageHandler,
 ) {
     private val logger = LoggerFactory.getLogger(GameServer::class.java)
 
-    private val bossGroup = NioEventLoopGroup(1)
-    private val workerGroup = NioEventLoopGroup()
+    private val useEpoll = Epoll.isAvailable()
+    private val bossGroup: EventLoopGroup = if (useEpoll) EpollEventLoopGroup(1) else NioEventLoopGroup(1)
+    private val workerGroup: EventLoopGroup = if (useEpoll) EpollEventLoopGroup() else NioEventLoopGroup()
+    private val serverChannelClass: Class<out ServerSocketChannel> =
+        if (useEpoll) EpollServerSocketChannel::class.java else NioServerSocketChannel::class.java
     private var channel: Channel? = null
 
-    val sessionManager = SessionManager(codec)
-    val room = Room(id = "global", maxPlayers = 2000)
+    val sessionManager = SessionManager()
 
     fun start() {
+        logger.info("Using ${if (useEpoll) "Epoll" else "NIO"} transport")
         try {
             val bootstrap = ServerBootstrap()
             bootstrap
                 .group(bossGroup, workerGroup)
-                .channel(NioServerSocketChannel::class.java)
+                .channel(serverChannelClass)
                 .option(ChannelOption.SO_BACKLOG, 1024)
                 .childOption(ChannelOption.SO_KEEPALIVE, true)
                 .childOption(ChannelOption.TCP_NODELAY, true)
-                .childHandler(GameServerInitializer(sessionManager, room, codec))
+                .childHandler(GameServerInitializer(sessionManager, messageHandler))
 
             channel = bootstrap.bind(port).sync().channel()
             logger.info("Game server started on port $port")
@@ -53,4 +59,3 @@ class GameServer(
         logger.info("Game server stopped")
     }
 }
-
