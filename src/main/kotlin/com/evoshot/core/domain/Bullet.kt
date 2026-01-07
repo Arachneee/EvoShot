@@ -1,10 +1,11 @@
-package com.evoshot.core.bullet
+package com.evoshot.core.domain
 
 import com.evoshot.core.util.VectorMath
 import kotlinx.serialization.Serializable
 
+@ConsistentCopyVisibility
 @Serializable
-data class Bullet(
+data class Bullet private constructor(
     val id: String,
     val x: Float,
     val y: Float,
