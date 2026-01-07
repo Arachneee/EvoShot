@@ -1,7 +1,6 @@
-package com.evoshot.core.game
+package com.evoshot.core
 
-import com.evoshot.core.handler.message.GameStateMessage
-import com.evoshot.core.room.Room
+import com.evoshot.core.handler.EvoShotMessageHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -13,7 +12,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
 class GameLoop(
-    private val room: Room,
+    private val handler: EvoShotMessageHandler,
     private val tickRate: Int = 60,
 ) {
     private val logger = LoggerFactory.getLogger(GameLoop::class.java)
@@ -34,7 +33,8 @@ class GameLoop(
                 while (running.get() && isActive) {
                     val startTime = System.currentTimeMillis()
 
-                    tick()
+                    val tick = tickCount.incrementAndGet()
+                    handler.play(tick)
 
                     val elapsed = System.currentTimeMillis() - startTime
                     val sleepTime = tickIntervalMs - elapsed
@@ -43,22 +43,6 @@ class GameLoop(
                     }
                 }
             }
-    }
-
-    private fun tick() {
-        val tick = tickCount.incrementAndGet()
-
-        room.play()
-
-        if (room.playerCount > 0) {
-            val gameState =
-                GameStateMessage(
-                    tick = tick,
-                    players = room.getAlivePlayerStates(),
-                    bullet = room.getAllBullets(),
-                )
-            room.broadcast(gameState)
-        }
     }
 
     fun stop() {
