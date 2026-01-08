@@ -22,5 +22,16 @@ object VectorMath {
         toX: Float,
         toY: Float,
     ): Float = hypot(toX - fromX, toY - fromY)
+
+    fun distanceSquared(
+        fromX: Float,
+        fromY: Float,
+        toX: Float,
+        toY: Float,
+    ): Float {
+        val dx = toX - fromX
+        val dy = toY - fromY
+        return dx * dx + dy * dy
+    }
 }
 
