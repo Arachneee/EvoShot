@@ -1,6 +1,6 @@
 package com.evoshot.core.engine
 
-import com.evoshot.core.domain.Positionable
+import com.evoshot.core.engine.Positionable
 
 class SpatialGrid(
     private val cellSize: Float,

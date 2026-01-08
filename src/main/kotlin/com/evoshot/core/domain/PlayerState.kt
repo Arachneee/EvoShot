@@ -1,5 +1,6 @@
 package com.evoshot.core.domain
 
+import com.evoshot.core.engine.Positionable
 import com.evoshot.core.util.VectorMath
 import kotlinx.serialization.Serializable
 import java.util.UUID
