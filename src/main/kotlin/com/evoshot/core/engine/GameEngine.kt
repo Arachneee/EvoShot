@@ -2,34 +2,57 @@ package com.evoshot.core.engine
 
 import com.evoshot.core.domain.Bullet
 import com.evoshot.core.domain.Player
+import com.evoshot.core.util.VectorMath
 
-class GameEngine(
-    private val worldWidth: Float,
-    private val worldHeight: Float,
-) {
-    fun moveBullets(bullets: List<Bullet>): List<Bullet> = bullets.map { it.move() }
+class GameEngine {
+    private val spatialGrid = SpatialGrid(
+        cellSize = HIT_RADIUS * 2,
+        worldWidth = WORLD_WIDTH,
+        worldHeight = WORLD_HEIGHT,
+    )
 
-    fun filterInBounds(bullets: List<Bullet>): List<Bullet> =
-        bullets.filter { bullet ->
-            bullet.x in 0f..worldWidth && bullet.y in 0f..worldHeight
+    fun moveAndFilterBullets(bullets: List<Bullet>): List<Bullet> =
+        bullets.mapNotNull { bullet ->
+            val moved = bullet.move()
+            if (moved.x in 0f..WORLD_WIDTH && moved.y in 0f..WORLD_HEIGHT) moved else null
         }
 
     fun checkHits(
         players: List<Player>,
         bullets: List<Bullet>,
     ): HitResult {
+        val bulletGrid = spatialGrid.buildBulletGrid(bullets)
         val hitBulletIds = mutableSetOf<String>()
+        val hitPlayerIds = mutableSetOf<String>()
 
-        players.forEach { player ->
-            player.checkHit(bullets)?.let { hitBullet ->
-                hitBulletIds.add(hitBullet.id)
+        for (player in players) {
+            val nearbyBullets = spatialGrid.getNearbyBullets(player.x, player.y, bulletGrid)
+
+            for (bullet in nearbyBullets) {
+                if (bullet.id in hitBulletIds) continue
+                if (isHit(player, bullet)) {
+                    hitBulletIds.add(bullet.id)
+                    hitPlayerIds.add(player.id)
+                    break
+                }
             }
         }
 
-        return HitResult(hitBulletIds = hitBulletIds)
+        return HitResult(hitBulletIds = hitBulletIds, hitPlayerIds = hitPlayerIds)
+    }
+
+    private fun isHit(player: Player, bullet: Bullet): Boolean =
+        VectorMath.distanceSquared(player.x, player.y, bullet.x, bullet.y) <= HIT_RADIUS_SQUARED
+
+    companion object {
+        const val WORLD_WIDTH = 1600f
+        const val WORLD_HEIGHT = 900f
+        private const val HIT_RADIUS = 10f
+        private const val HIT_RADIUS_SQUARED = HIT_RADIUS * HIT_RADIUS
     }
 }
 
 data class HitResult(
     val hitBulletIds: Set<String>,
+    val hitPlayerIds: Set<String>,
 )
