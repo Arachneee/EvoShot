@@ -13,17 +13,16 @@ class Bullets {
         tx: Float,
         ty: Float,
     ) {
-        val bullet = Bullet.create(
-            id = idCounter.incrementAndGet().toString(),
-            x = x,
-            y = y,
-            tx = tx,
-            ty = ty,
-        )
+        val bullet =
+            Bullet.create(
+                id = idCounter.incrementAndGet().toString(),
+                x = x,
+                y = y,
+                tx = tx,
+                ty = ty,
+            )
         bullets[bullet.id] = bullet
     }
-
-    fun remove(bulletId: String): Bullet? = bullets.remove(bulletId)
 
     fun getAll(): List<Bullet> = bullets.values.toList()
 
@@ -31,9 +30,4 @@ class Bullets {
         bullets.clear()
         bullets.putAll(newBullets.associateBy { it.id })
     }
-
-    fun removeAll(ids: Set<String>) {
-        ids.forEach { bullets.remove(it) }
-    }
 }
-
