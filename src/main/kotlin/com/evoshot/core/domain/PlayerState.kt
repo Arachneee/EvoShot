@@ -9,10 +9,10 @@ import java.util.UUID
 data class PlayerState private constructor(
     val id: String,
     val name: String,
-    val x: Float,
-    val y: Float,
+    override val x: Float,
+    override val y: Float,
     val isAlive: Boolean = true,
-) {
+) : Positionable {
     fun move(
         tx: Float,
         ty: Float,

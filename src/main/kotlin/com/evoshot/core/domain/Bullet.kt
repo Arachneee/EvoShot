@@ -7,11 +7,11 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class Bullet private constructor(
     val id: String,
-    val x: Float,
-    val y: Float,
+    override val x: Float,
+    override val y: Float,
     val headingX: Float,
     val headingY: Float,
-) {
+) : Positionable {
     fun move(): Bullet = copy(x = x + headingX * SPEED, y = y + headingY * SPEED)
 
     companion object {

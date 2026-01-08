@@ -21,12 +21,12 @@ class GameEngine {
         players: List<Player>,
         bullets: List<Bullet>,
     ): HitResult {
-        val bulletGrid = spatialGrid.buildBulletGrid(bullets)
+        val bulletGrid = spatialGrid.buildGrid(bullets)
         val hitBulletIds = mutableSetOf<String>()
         val hitPlayerIds = mutableSetOf<String>()
 
         for (player in players) {
-            val nearbyBullets = spatialGrid.getNearbyBullets(player.x, player.y, bulletGrid)
+            val nearbyBullets = spatialGrid.getNearbyItems(player.x, player.y, bulletGrid)
 
             for (bullet in nearbyBullets) {
                 if (bullet.id in hitBulletIds) continue

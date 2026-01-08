@@ -1,6 +1,6 @@
 package com.evoshot.core.engine
 
-import com.evoshot.core.domain.Bullet
+import com.evoshot.core.domain.Positionable
 
 class SpatialGrid(
     private val cellSize: Float,
@@ -10,7 +10,7 @@ class SpatialGrid(
     private val cols = (worldWidth / cellSize).toInt() + 1
     private val rows = (worldHeight / cellSize).toInt() + 1
 
-    fun buildBulletGrid(bullets: List<Bullet>): Map<Int, List<Bullet>> = bullets.groupBy { cellIndex(it.x, it.y) }
+    fun <T : Positionable> buildGrid(items: List<T>): Map<Int, List<T>> = items.groupBy { cellIndex(it.x, it.y) }
 
     private fun cellIndex(
         x: Float,
@@ -21,20 +21,20 @@ class SpatialGrid(
         return row * cols + col
     }
 
-    fun getNearbyBullets(
+    fun <T : Positionable> getNearbyItems(
         x: Float,
         y: Float,
-        bulletGrid: Map<Int, List<Bullet>>,
-    ): List<Bullet> {
+        grid: Map<Int, List<T>>,
+    ): List<T> {
         val centerCol = (x / cellSize).toInt()
         val centerRow = (y / cellSize).toInt()
 
-        val result = mutableListOf<Bullet>()
+        val result = mutableListOf<T>()
         for (dRow in -1..1) {
             for (dCol in -1..1) {
                 val col = (centerCol + dCol).coerceIn(0, cols - 1)
                 val row = (centerRow + dRow).coerceIn(0, rows - 1)
-                bulletGrid[row * cols + col]?.let { result.addAll(it) }
+                grid[row * cols + col]?.let { result.addAll(it) }
             }
         }
         return result
