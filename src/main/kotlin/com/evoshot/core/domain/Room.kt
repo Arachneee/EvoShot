@@ -3,17 +3,16 @@ package com.evoshot.core.domain
 import com.evoshot.core.engine.GameEngine
 import java.util.UUID
 
-class Room(
+class Room private constructor(
     val id: String,
-    private val playerRepository: PlayerRepository,
-    private val bulletRepository: BulletRepository,
+    private val players: Players,
+    private val bullets: Bullets,
     private val gameEngine: GameEngine,
 ) {
     val playerCount: Int
-        get() = playerRepository.count()
-
+        get() = players.count
     val isFull: Boolean
-        get() = playerRepository.isFull()
+        get() = players.isFull
 
     fun join(
         sessionId: String,
@@ -22,21 +21,30 @@ class Room(
         if (isFull) return null
 
         val player = Player.create(sessionId = sessionId, playerName = playerName)
-        playerRepository.add(player)
+        players.add(player)
 
         return player
     }
 
     fun leave(sessionId: String): String? {
-        val player = playerRepository.findBySessionId(sessionId) ?: return null
-        playerRepository.remove(player.id)
+        val player = players.findBySessionId(sessionId) ?: return null
+        players.remove(player.id)
         return player.id
     }
 
     fun tick() {
-        moveBullets()
-        removeOutOfBoundsBullets()
-        checkPlayerHits()
+        val allBullets = bullets.getAll()
+        val alivePlayers = players.findAllAlive()
+
+        val activeBullets = gameEngine.moveAndFilterBullets(allBullets)
+        val hitResult = gameEngine.checkHits(alivePlayers, activeBullets)
+
+        hitResult.hitPlayerIds.forEach { playerId ->
+            players.findById(playerId)?.kill()
+        }
+
+        val remainingBullets = activeBullets.filterNot { it.id in hitResult.hitBulletIds }
+        bullets.replaceAll(remainingBullets)
     }
 
     fun handlePlayerInput(
@@ -45,64 +53,42 @@ class Room(
         mouseY: Float,
         shoot: Boolean,
     ) {
-        val player = playerRepository.findBySessionId(sessionId) ?: return
+        val player = players.findBySessionId(sessionId) ?: return
 
         player.move(tx = mouseX, ty = mouseY)
 
         if (shoot) {
-            val bullet = Bullet.create(
+            bullets.createAndAdd(x = player.x, y = player.y, tx = mouseX, ty = mouseY)
+        }
+    }
+
+    fun getAndRemoveDeadPlayers(): List<DeadPlayerResult> {
+        val deadPlayers = players.findAllDead()
+        val results = deadPlayers.map { DeadPlayerResult(it.id, it.sessionId) }
+        results.forEach { players.remove(it.playerId) }
+        return results
+    }
+
+    fun getAlivePlayerStates(): List<PlayerState> = players.findAllAlive().map { it.toState() }
+
+    fun getAllBullets(): List<Bullet> = bullets.getAll()
+
+    fun getAllSessionIds(): List<String> = players.findAll().map { it.sessionId }
+
+    data class DeadPlayerResult(val playerId: String, val sessionId: String)
+
+    companion object {
+        private const val DEFAULT_MAX_PLAYERS = 2000
+
+        fun create(
+            gameEngine: GameEngine,
+            maxPlayers: Int = DEFAULT_MAX_PLAYERS,
+        ): Room =
+            Room(
                 id = UUID.randomUUID().toString(),
-                x = player.x,
-                y = player.y,
-                tx = mouseX,
-                ty = mouseY,
+                players = Players(maxPlayers),
+                bullets = Bullets(),
+                gameEngine = gameEngine,
             )
-            bulletRepository.add(bullet)
-        }
-    }
-
-    fun getAndRemoveDeadPlayers(): List<String> {
-        val deadPlayers = playerRepository.findAllDead()
-        val deadPlayerIds = deadPlayers.map { it.id }
-
-        deadPlayerIds.forEach { playerId ->
-            playerRepository.remove(playerId)
-        }
-
-        return deadPlayerIds
-    }
-
-    fun getPlayerIdBySessionId(sessionId: String): String? =
-        playerRepository.findBySessionId(sessionId)?.id
-
-    fun getSessionIdByPlayerId(playerId: String): String? =
-        playerRepository.findById(playerId)?.sessionId
-
-    fun getAlivePlayerStates(): List<PlayerState> =
-        playerRepository.findAllAlive().map { it.toState() }
-
-    fun getAllBullets(): List<Bullet> = bulletRepository.getAll()
-
-    private fun moveBullets() {
-        val bullets = bulletRepository.getAll()
-        val movedBullets = gameEngine.moveBullets(bullets)
-        bulletRepository.replaceAll(movedBullets)
-    }
-
-    private fun removeOutOfBoundsBullets() {
-        val bullets = bulletRepository.getAll()
-        val inBoundsBullets = gameEngine.filterInBounds(bullets)
-        bulletRepository.replaceAll(inBoundsBullets)
-    }
-
-    private fun checkPlayerHits() {
-        val bullets = bulletRepository.getAll()
-        val alivePlayers = playerRepository.findAllAlive()
-
-        val hitResult = gameEngine.checkHits(alivePlayers, bullets)
-
-        hitResult.hitBulletIds.forEach { bulletId ->
-            bulletRepository.remove(bulletId)
-        }
     }
 }
