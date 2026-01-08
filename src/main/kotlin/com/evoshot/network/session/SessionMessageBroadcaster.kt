@@ -29,4 +29,8 @@ class SessionMessageBroadcaster(
     override fun close(sessionId: String) {
         sessionManager.getSessionById(sessionId)?.close()
     }
+
+    override fun forEachSession(action: (String) -> Unit) {
+        sessionManager.getAllSessions().forEach { action(it.id) }
+    }
 }

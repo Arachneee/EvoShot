@@ -12,14 +12,14 @@ import com.evoshot.core.controller.message.PlayerInputMessage
 import com.evoshot.core.controller.message.PlayerJoinMessage
 import com.evoshot.core.controller.message.PlayerLeaveMessage
 import com.evoshot.core.controller.message.PongMessage
-import com.evoshot.core.domain.Room
+import com.evoshot.core.domain.RoomManager
 import com.evoshot.core.engine.GameTickHandler
 import com.evoshot.network.handler.MessageBroadcaster
 import com.evoshot.network.handler.MessageHandler
 import org.slf4j.LoggerFactory
 
 class GameController(
-    private val room: Room,
+    private val roomManager: RoomManager,
     private val codec: MessageCodec,
     private val broadcaster: MessageBroadcaster,
 ) : MessageHandler,
@@ -42,14 +42,15 @@ class GameController(
     }
 
     override fun onDisconnect(sessionId: String) {
-        val playerId = room.leave(sessionId)
+        val roomSessionIds = roomManager.getRoomSessionIds(sessionId)
+        val playerId = roomManager.leave(sessionId)
         if (playerId != null) {
-            broadcast(PlayerLeaveMessage(playerId = playerId))
+            broadcastToSessions(PlayerLeaveMessage(playerId = playerId), roomSessionIds)
         }
     }
 
     override fun onTick(tick: Long) {
-        room.tick()
+        roomManager.tick()
         processDeadPlayers()
         broadcastGameState(tick)
     }
@@ -86,7 +87,7 @@ class GameController(
         sessionId: String,
         message: ConnectMessage,
     ) {
-        val player = room.join(sessionId = sessionId, playerName = message.playerName)
+        val player = roomManager.join(sessionId = sessionId, playerName = message.playerName)
 
         if (player != null) {
             broadcaster.sendTo(
@@ -94,13 +95,15 @@ class GameController(
                 codec.encodeToString(
                     ConnectedMessage(
                         playerId = player.id,
-                        players = room.getAlivePlayerStates(),
+                        players = roomManager.getAlivePlayerStates(sessionId),
                     ),
                 ),
             )
 
-            broadcaster.broadcastExcept(
-                codec.encodeToString(PlayerJoinMessage(player = player.toState())),
+            val roomSessionIds = roomManager.getRoomSessionIds(sessionId)
+            broadcastToSessionsExcept(
+                PlayerJoinMessage(player = player.toState()),
+                roomSessionIds,
                 excludeSessionId = sessionId,
             )
         } else {
@@ -115,7 +118,7 @@ class GameController(
         sessionId: String,
         message: PlayerInputMessage,
     ) {
-        room.handlePlayerInput(
+        roomManager.handlePlayerInput(
             sessionId = sessionId,
             mouseX = message.mouseX,
             mouseY = message.mouseY,
@@ -124,34 +127,53 @@ class GameController(
     }
 
     private fun processDeadPlayers() {
-        val deadPlayerIds = room.getAndRemoveDeadPlayers()
+        val deadPlayerInfos = roomManager.getAndRemoveDeadPlayers()
 
-        deadPlayerIds.forEach { playerId ->
-            val sessionId = room.getSessionIdByPlayerId(playerId)
-            if (sessionId != null) {
+        deadPlayerInfos.forEach { info ->
+            if (info.sessionId != null) {
                 broadcaster.sendTo(
-                    sessionId,
-                    codec.encodeToString(PlayerDeadMessage(playerId = playerId, killedByBulletId = "")),
+                    info.sessionId,
+                    codec.encodeToString(PlayerDeadMessage(playerId = info.playerId, killedByBulletId = "")),
                 )
-                broadcaster.close(sessionId)
+                broadcaster.close(info.sessionId)
             }
-            broadcast(PlayerLeaveMessage(playerId = playerId))
+            broadcastToSessions(PlayerLeaveMessage(playerId = info.playerId), info.roomSessionIds)
         }
     }
 
     private fun broadcastGameState(tick: Long) {
-        if (room.playerCount > 0) {
+        roomManager.getAllRoomStates().forEach { roomState ->
             val gameState =
                 GameStateMessage(
                     tick = tick,
-                    players = room.getAlivePlayerStates(),
-                    bullet = room.getAllBullets(),
+                    players = roomState.players,
+                    bullet = roomState.bullets,
                 )
-            broadcast(gameState)
+            val encodedMessage = codec.encodeToString(gameState)
+            roomState.sessionIds.forEach { sessionId ->
+                broadcaster.sendTo(sessionId, encodedMessage)
+            }
         }
     }
 
-    private fun broadcast(message: GameMessage) {
-        broadcaster.broadcast(codec.encodeToString(message))
+    private fun broadcastToSessions(
+        message: GameMessage,
+        sessionIds: List<String>,
+    ) {
+        val encodedMessage = codec.encodeToString(message)
+        sessionIds.forEach { sessionId ->
+            broadcaster.sendTo(sessionId, encodedMessage)
+        }
+    }
+
+    private fun broadcastToSessionsExcept(
+        message: GameMessage,
+        sessionIds: List<String>,
+        excludeSessionId: String,
+    ) {
+        val encodedMessage = codec.encodeToString(message)
+        sessionIds.filter { it != excludeSessionId }.forEach { sessionId ->
+            broadcaster.sendTo(sessionId, encodedMessage)
+        }
     }
 }

@@ -14,4 +14,6 @@ interface MessageBroadcaster {
     )
 
     fun close(sessionId: String)
+
+    fun forEachSession(action: (String) -> Unit)
 }
