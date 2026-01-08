@@ -1,7 +1,5 @@
 package com.evoshot.core.domain
 
-import com.evoshot.core.domain.Bullet
-
 class Player private constructor(
     val sessionId: String,
     private var state: PlayerState,
@@ -19,10 +17,8 @@ class Player private constructor(
         this.state = state.move(tx, ty)
     }
 
-    fun checkHit(bullets: List<Bullet>): Bullet? {
-        val (newState, hitBullet) = state.checkHit(bullets)
-        this.state = newState
-        return hitBullet
+    fun kill() {
+        this.state = state.killed()
     }
 
     fun toState(): PlayerState = state

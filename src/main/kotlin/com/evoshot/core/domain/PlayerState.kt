@@ -1,6 +1,5 @@
 package com.evoshot.core.domain
 
-import com.evoshot.core.domain.Bullet
 import com.evoshot.core.util.VectorMath
 import kotlinx.serialization.Serializable
 import java.util.UUID
@@ -18,7 +17,7 @@ data class PlayerState private constructor(
         tx: Float,
         ty: Float,
     ): PlayerState {
-        if (VectorMath.distance(x, y, tx, ty) == 0f) return this
+        if (VectorMath.distanceSquared(x, y, tx, ty) == 0f) return this
 
         val (dx, dy) = VectorMath.normalizedDirection(x, y, tx, ty)
         val newX = (x + dx * SPEED).coerceIn(SPAWN_X_MIN.toFloat(), SPAWN_X_MAX.toFloat())
@@ -29,20 +28,10 @@ data class PlayerState private constructor(
         )
     }
 
-    fun checkHit(bullets: List<Bullet>): Pair<PlayerState, Bullet?> {
-        for (bullet in bullets) {
-            if (isHitBy(bullet)) {
-                return copy(isAlive = false) to bullet
-            }
-        }
-        return this to null
-    }
-
-    private fun isHitBy(bullet: Bullet): Boolean = VectorMath.distance(x, y, bullet.x, bullet.y) <= HEAT_SCAN_RADIUS
+    fun killed(): PlayerState = copy(isAlive = false)
 
     companion object {
         const val SPEED: Float = 5f
-        const val HEAT_SCAN_RADIUS: Float = 10f
         const val SPAWN_X_MIN: Int = 100
         const val SPAWN_X_MAX: Int = 1500
         const val SPAWN_Y_MIN: Int = 100
