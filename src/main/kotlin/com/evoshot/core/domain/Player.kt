@@ -34,5 +34,18 @@ class Player private constructor(
                     name = playerName,
                 ),
             )
+
+        internal fun createForTest(
+            sessionId: String,
+            id: String,
+            name: String,
+            x: Float,
+            y: Float,
+            isAlive: Boolean = true,
+        ): Player =
+            Player(
+                sessionId,
+                PlayerState.createForTest(id, name, x, y, isAlive),
+            )
     }
 }
