@@ -1,16 +1,19 @@
 package com.evoshot.core.room
 
 import com.evoshot.core.domain.Room
+import com.evoshot.core.engine.GameEngine
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class RoomTest {
     private lateinit var room: Room
+    private lateinit var gameEngine: GameEngine
 
     @BeforeEach
     fun setUp() {
-        room = Room(id = "test-room", maxPlayers = 10)
+        gameEngine = GameEngine()
+        room = Room.create(gameEngine = gameEngine, maxPlayers = 10)
     }
 
     @Test
@@ -51,7 +54,7 @@ class RoomTest {
 
     @Test
     fun `최대 인원 초과 시 입장할 수 없다`() {
-        val smallRoom = Room(id = "small", maxPlayers = 2)
+        val smallRoom = Room.create(gameEngine = gameEngine, maxPlayers = 2)
         smallRoom.join(sessionId = "s1", playerName = "Player1")
         smallRoom.join(sessionId = "s2", playerName = "Player2")
 
