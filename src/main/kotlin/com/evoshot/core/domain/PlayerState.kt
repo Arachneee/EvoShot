@@ -1,7 +1,7 @@
 package com.evoshot.core.domain
 
+import com.evoshot.core.engine.Physics
 import com.evoshot.core.engine.Positionable
-import com.evoshot.core.util.VectorMath
 import kotlinx.serialization.Serializable
 import java.util.UUID
 
@@ -12,21 +12,39 @@ data class PlayerState private constructor(
     val name: String,
     override val x: Float,
     override val y: Float,
+    val velocityY: Float = 0f,
     val isAlive: Boolean = true,
 ) : Positionable {
-    fun move(
-        tx: Float,
-        ty: Float,
-    ): PlayerState {
-        if (VectorMath.distanceSquared(x, y, tx, ty) == 0f) return this
+    val isOnGround: Boolean
+        get() = y >= Physics.GROUND_Y
 
-        val (dx, dy) = VectorMath.normalizedDirection(x, y, tx, ty)
+    fun move(dx: Int): PlayerState {
         val newX = (x + dx * SPEED).coerceIn(SPAWN_X_MIN.toFloat(), SPAWN_X_MAX.toFloat())
-        val newY = (y + dy * SPEED).coerceIn(SPAWN_Y_MIN.toFloat(), SPAWN_Y_MAX.toFloat())
-        return copy(
-            x = newX,
-            y = newY,
-        )
+        return if (newX == x) this else copy(x = newX)
+    }
+
+    fun applyGravity(): PlayerState {
+        if (isOnGround && velocityY >= 0f) {
+            return if (y == Physics.GROUND_Y && velocityY == 0f) {
+                this
+            } else {
+                copy(y = Physics.GROUND_Y, velocityY = 0f)
+            }
+        }
+
+        val newVelocityY = (velocityY + Physics.GRAVITY).coerceAtMost(Physics.MAX_FALL_VELOCITY)
+        val newY = (y + newVelocityY).coerceAtMost(Physics.GROUND_Y)
+
+        return if (newY >= Physics.GROUND_Y) {
+            copy(y = Physics.GROUND_Y, velocityY = 0f)
+        } else {
+            copy(y = newY, velocityY = newVelocityY)
+        }
+    }
+
+    fun jump(): PlayerState {
+        if (!isOnGround) return this
+        return copy(velocityY = Physics.JUMP_VELOCITY)
     }
 
     fun killed(): PlayerState = copy(isAlive = false)
@@ -43,7 +61,8 @@ data class PlayerState private constructor(
                 id = UUID.randomUUID().toString(),
                 name = name,
                 x = (SPAWN_X_MIN..SPAWN_X_MAX).random().toFloat(),
-                y = (SPAWN_Y_MIN..SPAWN_Y_MAX).random().toFloat(),
+                y = Physics.GROUND_Y,
+                velocityY = 0f,
             )
 
         internal fun createForTest(
@@ -51,7 +70,8 @@ data class PlayerState private constructor(
             name: String,
             x: Float,
             y: Float,
+            velocityY: Float = 0f,
             isAlive: Boolean = true,
-        ): PlayerState = PlayerState(id, name, x, y, isAlive)
+        ): PlayerState = PlayerState(id, name, x, y, velocityY, isAlive)
     }
 }
