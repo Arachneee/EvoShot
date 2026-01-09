@@ -48,6 +48,8 @@ data class PlayerLeaveMessage(
 @Serializable
 @SerialName("player_input")
 data class PlayerInputMessage(
+    val dx: Int = 0,
+    val jump: Boolean = false,
     val mouseX: Float,
     val mouseY: Float,
     val shoot: Boolean = false,

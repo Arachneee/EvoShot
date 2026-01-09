@@ -120,6 +120,8 @@ class GameController(
     ) {
         roomManager.handlePlayerInput(
             sessionId = sessionId,
+            dx = message.dx,
+            jump = message.jump,
             mouseX = message.mouseX,
             mouseY = message.mouseY,
             shoot = message.shoot,

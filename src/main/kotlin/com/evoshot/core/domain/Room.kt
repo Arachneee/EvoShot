@@ -33,9 +33,11 @@ class Room private constructor(
     }
 
     fun tick() {
-        val allBullets = bullets.getAll()
         val alivePlayers = players.findAllAlive()
 
+        alivePlayers.forEach { it.applyInput() }
+
+        val allBullets = bullets.getAll()
         val activeBullets = gameEngine.moveAndFilterBullets(allBullets)
         val hitResult = gameEngine.checkHits(alivePlayers, activeBullets)
 
@@ -49,16 +51,19 @@ class Room private constructor(
 
     fun handlePlayerInput(
         sessionId: String,
+        dx: Int,
+        jump: Boolean,
         mouseX: Float,
         mouseY: Float,
         shoot: Boolean,
     ) {
         val player = players.findBySessionId(sessionId) ?: return
 
-        player.move(tx = mouseX, ty = mouseY)
+        player.setInput(dx = dx, jump = jump)
 
-        if (shoot) {
-            bullets.createAndAdd(x = player.x, y = player.y, tx = mouseX, ty = mouseY)
+        if (shoot && player.canShoot()) {
+            bullets.createAndAdd(ownerId = player.id, x = player.x, y = player.y, tx = mouseX, ty = mouseY)
+            player.recordShoot()
         }
     }
 
@@ -75,10 +80,13 @@ class Room private constructor(
 
     fun getAllSessionIds(): List<String> = players.findAll().map { it.sessionId }
 
-    data class DeadPlayerResult(val playerId: String, val sessionId: String)
+    data class DeadPlayerResult(
+        val playerId: String,
+        val sessionId: String,
+    )
 
     companion object {
-        private const val DEFAULT_MAX_PLAYERS = 2000
+        private const val DEFAULT_MAX_PLAYERS = 2
 
         fun create(
             gameEngine: GameEngine,

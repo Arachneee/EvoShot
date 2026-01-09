@@ -65,23 +65,24 @@ class RoomTest {
     }
 
     @Test
-    fun `플레이어 입력 처리 시 플레이어가 이동한다`() {
+    fun `플레이어 입력 처리 후 tick 호출 시 플레이어가 이동한다`() {
         val player = room.join(sessionId = "session1", playerName = "홍길동")
         val initialX = player!!.x
-        val initialY = player.y
 
         room.handlePlayerInput(
             sessionId = "session1",
+            dx = 1,
+            jump = false,
             mouseX = initialX + 100f,
-            mouseY = initialY + 100f,
+            mouseY = player.y + 100f,
             shoot = false,
         )
+        room.tick()
 
         val states = room.getAlivePlayerStates()
         val updatedState = states.find { it.id == player.id }
         assertThat(updatedState).isNotNull
         assertThat(updatedState!!.x).isNotEqualTo(initialX)
-        assertThat(updatedState.y).isNotEqualTo(initialY)
     }
 
     @Test

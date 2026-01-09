@@ -36,12 +36,14 @@ class RoomManager(
 
     fun handlePlayerInput(
         sessionId: String,
+        dx: Int,
+        jump: Boolean,
         mouseX: Float,
         mouseY: Float,
         shoot: Boolean,
     ) {
         val room = sessionToRoom[sessionId] ?: return
-        room.handlePlayerInput(sessionId, mouseX, mouseY, shoot)
+        room.handlePlayerInput(sessionId, dx, jump, mouseX, mouseY, shoot)
     }
 
     fun getAndRemoveDeadPlayers(): List<DeadPlayerInfo> {
