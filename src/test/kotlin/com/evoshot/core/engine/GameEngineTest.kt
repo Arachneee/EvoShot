@@ -24,6 +24,7 @@ class GameEngineTest {
         fun `총알이 이동한다`() {
             val bullet = Bullet.create(
                 id = "bullet-1",
+                ownerId = "player-1",
                 x = 100f,
                 y = 100f,
                 tx = 200f,
@@ -40,6 +41,7 @@ class GameEngineTest {
         fun `월드 왼쪽 경계를 벗어난 총알은 필터링된다`() {
             val bullet = Bullet.create(
                 id = "bullet-1",
+                ownerId = "player-1",
                 x = 5f,
                 y = 100f,
                 tx = -100f,
@@ -55,6 +57,7 @@ class GameEngineTest {
         fun `월드 오른쪽 경계를 벗어난 총알은 필터링된다`() {
             val bullet = Bullet.create(
                 id = "bullet-1",
+                ownerId = "player-1",
                 x = GameEngine.WORLD_WIDTH - 5f,
                 y = 100f,
                 tx = GameEngine.WORLD_WIDTH + 100f,
@@ -70,6 +73,7 @@ class GameEngineTest {
         fun `월드 상단 경계를 벗어난 총알은 필터링된다`() {
             val bullet = Bullet.create(
                 id = "bullet-1",
+                ownerId = "player-1",
                 x = 100f,
                 y = 5f,
                 tx = 100f,
@@ -85,6 +89,7 @@ class GameEngineTest {
         fun `월드 하단 경계를 벗어난 총알은 필터링된다`() {
             val bullet = Bullet.create(
                 id = "bullet-1",
+                ownerId = "player-1",
                 x = 100f,
                 y = GameEngine.WORLD_HEIGHT - 5f,
                 tx = 100f,
@@ -97,9 +102,26 @@ class GameEngineTest {
         }
 
         @Test
+        fun `바닥에 닿은 총알은 필터링된다`() {
+            val bullet = Bullet.create(
+                id = "bullet-1",
+                ownerId = "player-1",
+                x = 100f,
+                y = Physics.GROUND_Y - 5f,
+                tx = 100f,
+                ty = Physics.GROUND_Y + 100f,
+            )
+
+            val result = gameEngine.moveAndFilterBullets(listOf(bullet))
+
+            assertThat(result).isEmpty()
+        }
+
+        @Test
         fun `월드 내부에 있는 총알은 유지된다`() {
             val bullet = Bullet.create(
                 id = "bullet-1",
+                ownerId = "player-1",
                 x = 500f,
                 y = 500f,
                 tx = 600f,
@@ -115,6 +137,7 @@ class GameEngineTest {
         fun `여러 총알 중 경계를 벗어난 총알만 필터링된다`() {
             val insideBullet = Bullet.create(
                 id = "bullet-1",
+                ownerId = "player-1",
                 x = 500f,
                 y = 500f,
                 tx = 600f,
@@ -122,6 +145,7 @@ class GameEngineTest {
             )
             val outsideBullet = Bullet.create(
                 id = "bullet-2",
+                ownerId = "player-1",
                 x = 5f,
                 y = 100f,
                 tx = -100f,
@@ -141,6 +165,7 @@ class GameEngineTest {
         fun `빈 플레이어 리스트는 빈 결과를 반환한다`() {
             val bullet = Bullet.create(
                 id = "bullet-1",
+                ownerId = "player-1",
                 x = 100f,
                 y = 100f,
                 tx = 200f,
@@ -180,6 +205,7 @@ class GameEngineTest {
             )
             val bullet = Bullet.create(
                 id = "bullet-1",
+                ownerId = "other-player",
                 x = 100f,
                 y = 100f,
                 tx = 200f,
@@ -203,6 +229,7 @@ class GameEngineTest {
             )
             val bullet = Bullet.create(
                 id = "bullet-1",
+                ownerId = "other-player",
                 x = 105f,
                 y = 105f,
                 tx = 200f,
@@ -226,6 +253,7 @@ class GameEngineTest {
             )
             val bullet = Bullet.create(
                 id = "bullet-1",
+                ownerId = "other-player",
                 x = 200f,
                 y = 200f,
                 tx = 300f,
@@ -256,6 +284,7 @@ class GameEngineTest {
             )
             val bullet = Bullet.create(
                 id = "bullet-1",
+                ownerId = "other-player",
                 x = 100f,
                 y = 100f,
                 tx = 200f,
@@ -286,6 +315,7 @@ class GameEngineTest {
             )
             val bullet1 = Bullet.create(
                 id = "bullet-1",
+                ownerId = "player-2",
                 x = 100f,
                 y = 100f,
                 tx = 200f,
@@ -293,6 +323,7 @@ class GameEngineTest {
             )
             val bullet2 = Bullet.create(
                 id = "bullet-2",
+                ownerId = "player-1",
                 x = 500f,
                 y = 500f,
                 tx = 600f,
@@ -316,6 +347,7 @@ class GameEngineTest {
             )
             val bullet1 = Bullet.create(
                 id = "bullet-1",
+                ownerId = "other-player",
                 x = 100f,
                 y = 100f,
                 tx = 200f,
@@ -323,6 +355,7 @@ class GameEngineTest {
             )
             val bullet2 = Bullet.create(
                 id = "bullet-2",
+                ownerId = "other-player",
                 x = 100f,
                 y = 100f,
                 tx = 200f,
@@ -333,6 +366,30 @@ class GameEngineTest {
 
             assertThat(result.hitPlayerIds).hasSize(1)
             assertThat(result.hitBulletIds).hasSize(1)
+        }
+
+        @Test
+        fun `자신이 발사한 총알에는 맞지 않는다`() {
+            val player = Player.createForTest(
+                sessionId = "session-1",
+                id = "player-1",
+                name = "홍길동",
+                x = 100f,
+                y = 100f,
+            )
+            val bullet = Bullet.create(
+                id = "bullet-1",
+                ownerId = "player-1",
+                x = 100f,
+                y = 100f,
+                tx = 200f,
+                ty = 100f,
+            )
+
+            val result = gameEngine.checkHits(listOf(player), listOf(bullet))
+
+            assertThat(result.hitPlayerIds).isEmpty()
+            assertThat(result.hitBulletIds).isEmpty()
         }
     }
 }

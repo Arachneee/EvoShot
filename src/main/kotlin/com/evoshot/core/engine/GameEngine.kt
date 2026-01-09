@@ -14,7 +14,9 @@ class GameEngine {
     fun moveAndFilterBullets(bullets: List<Bullet>): List<Bullet> =
         bullets.mapNotNull { bullet ->
             val moved = bullet.move()
-            if (moved.x in 0f..WORLD_WIDTH && moved.y in 0f..WORLD_HEIGHT) moved else null
+            val isInBounds = moved.x in 0f..WORLD_WIDTH && moved.y in 0f..WORLD_HEIGHT
+            val isNotOnGround = !moved.isOnGround()
+            if (isInBounds && isNotOnGround) moved else null
         }
 
     fun checkHits(
@@ -30,6 +32,7 @@ class GameEngine {
 
             for (bullet in nearbyBullets) {
                 if (bullet.id in hitBulletIds) continue
+                if (bullet.ownerId == player.id) continue
                 if (isHit(player, bullet)) {
                     hitBulletIds.add(bullet.id)
                     hitPlayerIds.add(player.id)
