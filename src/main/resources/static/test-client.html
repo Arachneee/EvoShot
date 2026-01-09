@@ -66,12 +66,31 @@
         const SERVER_PORT = 8080;
         const WS_PATH = '/ws';
 
+        const WORLD_WIDTH = 1600;
+        const WORLD_HEIGHT = 900;
+
         let ws = null;
         let playerId = null;
         let players = {};
         let bullets = [];
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
+
+        function gameToCanvas(gameX, gameY) {
+            const scaleX = canvas.width / WORLD_WIDTH;
+            const scaleY = canvas.height / WORLD_HEIGHT;
+            return { x: gameX * scaleX, y: gameY * scaleY };
+        }
+
+        function canvasToGame(canvasX, canvasY) {
+            const scaleX = canvas.width / WORLD_WIDTH;
+            const scaleY = canvas.height / WORLD_HEIGHT;
+            return { x: canvasX / scaleX, y: canvasY / scaleY };
+        }
+
+        function getScale() {
+            return Math.min(canvas.width / WORLD_WIDTH, canvas.height / WORLD_HEIGHT);
+        }
 
         function resizeCanvas() {
             canvas.width = canvas.clientWidth;
@@ -178,39 +197,57 @@
             ctx.fillStyle = '#0f0f23';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+            const scale = getScale();
+
+            // 바닥 그리기
+            const groundY = gameToCanvas(0, 880).y;
+            ctx.fillStyle = '#2a2a4a';
+            ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
+
             // 총알 렌더링
             bullets.forEach(bullet => {
+                const pos = gameToCanvas(bullet.x, bullet.y);
                 ctx.beginPath();
-                ctx.arc(bullet.x, bullet.y, 5, 0, Math.PI * 2);
+                ctx.arc(pos.x, pos.y, 5 * scale, 0, Math.PI * 2);
                 ctx.fillStyle = '#ffff00';
                 ctx.fill();
             });
 
             Object.values(players).forEach(player => {
+                const pos = gameToCanvas(player.x, player.y);
+                const radius = 20 * scale;
+
                 // 플레이어 원
                 ctx.beginPath();
-                ctx.arc(player.x, player.y, 20, 0, Math.PI * 2);
+                ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
                 ctx.fillStyle = player.id === playerId ? '#00ff88' : '#ff6b6b';
                 ctx.fill();
 
                 // 이름
                 ctx.fillStyle = '#fff';
-                ctx.font = '12px Arial';
+                ctx.font = `${12 * scale}px Arial`;
                 ctx.textAlign = 'center';
-                ctx.fillText(player.name, player.x, player.y - 30);
+                ctx.fillText(player.name, pos.x, pos.y - radius - 10 * scale);
             });
         }
 
-        // 마우스 이동 시 입력 전송 (throttle: 16ms = 60fps)
         let lastMouseX = 0;
         let lastMouseY = 0;
-        let lastSendTime = 0;
-        const SEND_INTERVAL = 16; // 16ms = 약 60fps
+        const keysPressed = {};
 
         function sendPlayerInput(shoot = false) {
             if (ws && ws.readyState === WebSocket.OPEN) {
+                let dx = 0;
+                
+                if (keysPressed['KeyA'] || keysPressed['ArrowLeft']) dx -= 1;
+                if (keysPressed['KeyD'] || keysPressed['ArrowRight']) dx += 1;
+
+                const jump = keysPressed['KeyW'] || keysPressed['ArrowUp'] || keysPressed['Space'];
+
                 ws.send(JSON.stringify({
                     type: 'player_input',
+                    dx: dx,
+                    jump: jump,
                     mouseX: lastMouseX,
                     mouseY: lastMouseY,
                     shoot: shoot
@@ -218,34 +255,46 @@
             }
         }
 
-        canvas.addEventListener('mousemove', (e) => {
+        document.addEventListener('keydown', (e) => {
             if (!ws || !playerId) return;
-            
-            const rect = canvas.getBoundingClientRect();
-            lastMouseX = e.clientX - rect.left;
-            lastMouseY = e.clientY - rect.top;
-
-            const now = Date.now();
-            if (now - lastSendTime >= SEND_INTERVAL) {
-                lastSendTime = now;
-                sendPlayerInput(false);
-            }
+            keysPressed[e.code] = true;
         });
 
-        // 마우스 클릭 시 총알 발사
+        document.addEventListener('keyup', (e) => {
+            delete keysPressed[e.code];
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!ws || !playerId) return;
+            const rect = canvas.getBoundingClientRect();
+            const canvasX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const canvasY = (e.clientY - rect.top) * (canvas.height / rect.height);
+            const gamePos = canvasToGame(canvasX, canvasY);
+            lastMouseX = gamePos.x;
+            lastMouseY = gamePos.y;
+        });
+
         canvas.addEventListener('mousedown', (e) => {
             e.preventDefault();
             if (!ws || !playerId) return;
             
             const rect = canvas.getBoundingClientRect();
-            lastMouseX = e.clientX - rect.left;
-            lastMouseY = e.clientY - rect.top;
+            const canvasX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const canvasY = (e.clientY - rect.top) * (canvas.height / rect.height);
+            const gamePos = canvasToGame(canvasX, canvasY);
+            lastMouseX = gamePos.x;
+            lastMouseY = gamePos.y;
 
             sendPlayerInput(true);
         });
 
-        // 컨텍스트 메뉴 방지
         canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        setInterval(() => {
+            if (ws && ws.readyState === WebSocket.OPEN && playerId) {
+                sendPlayerInput(false);
+            }
+        }, 16);
 
         // Ping 테스트
         setInterval(() => {
