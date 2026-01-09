@@ -47,6 +47,10 @@
             height: calc(100vh - 140px);
             user-select: none;
             -webkit-user-select: none;
+            outline: none;
+        }
+        #canvas.playing {
+            cursor: none;
         }
     </style>
 </head>
@@ -59,7 +63,7 @@
         <button id="disconnectBtn" onclick="disconnect()" disabled>Disconnect</button>
     </div>
     
-    <canvas id="canvas"></canvas>
+    <canvas id="canvas" tabindex="0"></canvas>
 
     <script>
         const SERVER_HOST = window.location.hostname;
@@ -128,6 +132,7 @@
                 log('WebSocket 연결 종료', 'error');
                 document.getElementById('connectBtn').disabled = false;
                 document.getElementById('disconnectBtn').disabled = true;
+                canvas.classList.remove('playing');
                 ws = null;
                 playerId = null;
             };
@@ -159,6 +164,8 @@
                     playerId = message.playerId;
                     players = {};
                     message.players.forEach(p => players[p.id] = p);
+                    canvas.classList.add('playing');
+                    canvas.focus();
                     log(`접속 완료! PlayerId: ${playerId}, 현재 ${message.players.length}명`, 'info');
                     break;
 
@@ -184,6 +191,7 @@
                 case 'player_dead':
                     log(`죽었습니다! 다시 연결하세요.`, 'error');
                     alert('💀 죽었습니다! 다시 연결하세요.');
+                    canvas.classList.remove('playing');
                     playerId = null;
                     players = {};
                     bullets = [];
@@ -223,16 +231,89 @@
                 ctx.fillStyle = player.id === playerId ? '#00ff88' : '#ff6b6b';
                 ctx.fill();
 
+                // 체력바
+                const maxHp = 10;
+                const hp = player.hp ?? maxHp;
+                const hpBarWidth = 40 * scale;
+                const hpBarHeight = 6 * scale;
+                const hpBarX = pos.x - hpBarWidth / 2;
+                const hpBarY = pos.y - radius - 20 * scale;
+
+                // 체력바 배경 (검은색)
+                ctx.fillStyle = '#222';
+                ctx.fillRect(hpBarX, hpBarY, hpBarWidth, hpBarHeight);
+
+                // 체력바 테두리
+                ctx.strokeStyle = '#555';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(hpBarX, hpBarY, hpBarWidth, hpBarHeight);
+
+                // 체력바 채우기
+                const hpRatio = hp / maxHp;
+                let hpColor;
+                if (hpRatio > 0.6) {
+                    hpColor = '#00ff88';
+                } else if (hpRatio > 0.3) {
+                    hpColor = '#ffcc00';
+                } else {
+                    hpColor = '#ff4444';
+                }
+                ctx.fillStyle = hpColor;
+                ctx.fillRect(hpBarX, hpBarY, hpBarWidth * hpRatio, hpBarHeight);
+
                 // 이름
                 ctx.fillStyle = '#fff';
                 ctx.font = `${12 * scale}px Arial`;
                 ctx.textAlign = 'center';
-                ctx.fillText(player.name, pos.x, pos.y - radius - 10 * scale);
+                ctx.fillText(player.name, pos.x, pos.y - radius - 26 * scale);
             });
+
+            // 에임 (크로스헤어) 렌더링 - 연결된 상태에서만 표시
+            if (playerId && (canvasMouseX > 0 || canvasMouseY > 0)) {
+                const aimSize = 12;
+                const aimGap = 4;
+                const aimThickness = 2;
+
+                ctx.strokeStyle = '#00ffff';
+                ctx.lineWidth = aimThickness;
+                ctx.lineCap = 'round';
+
+                // 상단 선
+                ctx.beginPath();
+                ctx.moveTo(canvasMouseX, canvasMouseY - aimGap);
+                ctx.lineTo(canvasMouseX, canvasMouseY - aimSize);
+                ctx.stroke();
+
+                // 하단 선
+                ctx.beginPath();
+                ctx.moveTo(canvasMouseX, canvasMouseY + aimGap);
+                ctx.lineTo(canvasMouseX, canvasMouseY + aimSize);
+                ctx.stroke();
+
+                // 좌측 선
+                ctx.beginPath();
+                ctx.moveTo(canvasMouseX - aimGap, canvasMouseY);
+                ctx.lineTo(canvasMouseX - aimSize, canvasMouseY);
+                ctx.stroke();
+
+                // 우측 선
+                ctx.beginPath();
+                ctx.moveTo(canvasMouseX + aimGap, canvasMouseY);
+                ctx.lineTo(canvasMouseX + aimSize, canvasMouseY);
+                ctx.stroke();
+
+                // 중앙 점
+                ctx.beginPath();
+                ctx.arc(canvasMouseX, canvasMouseY, 2, 0, Math.PI * 2);
+                ctx.fillStyle = '#00ffff';
+                ctx.fill();
+            }
         }
 
         let lastMouseX = 0;
         let lastMouseY = 0;
+        let canvasMouseX = 0;
+        let canvasMouseY = 0;
         const keysPressed = {};
 
         function sendPlayerInput(shoot = false) {
@@ -255,23 +336,26 @@
             }
         }
 
-        document.addEventListener('keydown', (e) => {
+        canvas.addEventListener('keydown', (e) => {
             if (!ws || !playerId) return;
+            e.preventDefault();
             keysPressed[e.code] = true;
         });
 
-        document.addEventListener('keyup', (e) => {
+        canvas.addEventListener('keyup', (e) => {
             delete keysPressed[e.code];
         });
 
         canvas.addEventListener('mousemove', (e) => {
-            if (!ws || !playerId) return;
             const rect = canvas.getBoundingClientRect();
             const canvasX = (e.clientX - rect.left) * (canvas.width / rect.width);
             const canvasY = (e.clientY - rect.top) * (canvas.height / rect.height);
+            canvasMouseX = canvasX;
+            canvasMouseY = canvasY;
             const gamePos = canvasToGame(canvasX, canvasY);
             lastMouseX = gamePos.x;
             lastMouseY = gamePos.y;
+            render();
         });
 
         canvas.addEventListener('mousedown', (e) => {
