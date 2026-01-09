@@ -1,106 +1,134 @@
 package com.evoshot.core.bullet
 
 import com.evoshot.core.domain.Bullet
+import com.evoshot.core.engine.Physics
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.data.Offset
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 
 class BulletTest {
     private val offset = Offset.offset(0.0001f)
 
-    @Test
-    fun `Bullet 생성 시 방향이 정규화된다`() {
-        val bullet = Bullet.create(
-            id = "bullet-1",
-            x = 0f,
-            y = 0f,
-            tx = 100f,
-            ty = 0f,
-        )
+    @Nested
+    inner class Create {
+        @Test
+        fun `Bullet 생성 시 속도가 정규화된 방향에 SPEED를 곱한 값이다`() {
+            val bullet = Bullet.create(
+                id = "bullet-1",
+                ownerId = "player-1",
+                x = 0f,
+                y = 0f,
+                tx = 100f,
+                ty = 0f,
+            )
 
-        assertThat(bullet.headingX).isCloseTo(1f, offset)
-        assertThat(bullet.headingY).isCloseTo(0f, offset)
+            assertThat(bullet.velocityX).isCloseTo(Bullet.SPEED, offset)
+            assertThat(bullet.velocityY).isCloseTo(0f, offset)
+        }
+
+        @Test
+        fun `대각선 방향으로 생성 시 속도 벡터가 정규화된 방향으로 설정된다`() {
+            val bullet = Bullet.create(
+                id = "bullet-1",
+                ownerId = "player-1",
+                x = 0f,
+                y = 0f,
+                tx = 100f,
+                ty = 100f,
+            )
+
+            val expectedComponent = Bullet.SPEED / kotlin.math.sqrt(2f)
+            assertThat(bullet.velocityX).isCloseTo(expectedComponent, offset)
+            assertThat(bullet.velocityY).isCloseTo(expectedComponent, offset)
+        }
     }
 
-    @Test
-    fun `대각선 방향으로 생성 시 방향 벡터가 정규화된다`() {
-        val bullet = Bullet.create(
-            id = "bullet-1",
-            x = 0f,
-            y = 0f,
-            tx = 100f,
-            ty = 100f,
-        )
+    @Nested
+    inner class Move {
+        @Test
+        fun `move 호출 시 속도만큼 이동하고 중력이 적용된다`() {
+            val bullet = Bullet.create(
+                id = "bullet-1",
+                ownerId = "player-1",
+                x = 100f,
+                y = 100f,
+                tx = 200f,
+                ty = 100f,
+            )
 
-        val expectedComponent = 1f / kotlin.math.sqrt(2f)
-        assertThat(bullet.headingX).isCloseTo(expectedComponent, offset)
-        assertThat(bullet.headingY).isCloseTo(expectedComponent, offset)
+            val moved = bullet.move()
+
+            assertThat(moved.x).isCloseTo(100f + Bullet.SPEED, offset)
+            assertThat(moved.y).isGreaterThan(100f)
+            assertThat(moved.velocityY).isCloseTo(Physics.GRAVITY, offset)
+        }
+
+        @Test
+        fun `move 호출 후에도 id와 velocityX는 유지된다`() {
+            val bullet = Bullet.create(
+                id = "bullet-1",
+                ownerId = "player-1",
+                x = 0f,
+                y = 0f,
+                tx = 100f,
+                ty = 50f,
+            )
+
+            val moved = bullet.move()
+
+            assertThat(moved.id).isEqualTo("bullet-1")
+            assertThat(moved.velocityX).isEqualTo(bullet.velocityX)
+        }
+
+        @Test
+        fun `연속 move 호출 시 중력이 누적 적용된다`() {
+            val bullet = Bullet.create(
+                id = "bullet-1",
+                ownerId = "player-1",
+                x = 0f,
+                y = 0f,
+                tx = 100f,
+                ty = 0f,
+            )
+
+            val movedTwice = bullet.move().move()
+
+            assertThat(movedTwice.x).isCloseTo(Bullet.SPEED * 2, offset)
+            val expectedVelocityY = Physics.GRAVITY * 2
+            assertThat(movedTwice.velocityY).isCloseTo(expectedVelocityY, offset)
+        }
     }
 
-    @Test
-    fun `move 호출 시 SPEED만큼 방향으로 이동한다`() {
-        val bullet = Bullet.create(
-            id = "bullet-1",
-            x = 100f,
-            y = 100f,
-            tx = 200f,
-            ty = 100f,
-        )
+    @Nested
+    inner class IsOnGround {
+        @Test
+        fun `y가 GROUND_Y 이상이면 바닥에 있다`() {
+            val bullet = Bullet.create(
+                id = "bullet-1",
+                ownerId = "player-1",
+                x = 100f,
+                y = Physics.GROUND_Y,
+                tx = 200f,
+                ty = Physics.GROUND_Y,
+            )
 
-        val moved = bullet.move()
+            assertThat(bullet.isOnGround()).isTrue()
+        }
 
-        assertThat(moved.x).isCloseTo(100f + Bullet.SPEED, offset)
-        assertThat(moved.y).isCloseTo(100f, offset)
-    }
+        @Test
+        fun `y가 GROUND_Y 미만이면 공중에 있다`() {
+            val bullet = Bullet.create(
+                id = "bullet-1",
+                ownerId = "player-1",
+                x = 100f,
+                y = Physics.GROUND_Y - 100f,
+                tx = 200f,
+                ty = Physics.GROUND_Y - 100f,
+            )
 
-    @Test
-    fun `대각선 방향으로 이동 시 정규화된 방향으로 SPEED만큼 이동한다`() {
-        val bullet = Bullet.create(
-            id = "bullet-1",
-            x = 100f,
-            y = 100f,
-            tx = 200f,
-            ty = 200f,
-        )
-
-        val moved = bullet.move()
-
-        val expectedComponent = Bullet.SPEED / kotlin.math.sqrt(2f)
-        assertThat(moved.x).isCloseTo(100f + expectedComponent, offset)
-        assertThat(moved.y).isCloseTo(100f + expectedComponent, offset)
-    }
-
-    @Test
-    fun `move 호출 후에도 id와 방향은 유지된다`() {
-        val bullet = Bullet.create(
-            id = "bullet-1",
-            x = 0f,
-            y = 0f,
-            tx = 100f,
-            ty = 50f,
-        )
-
-        val moved = bullet.move()
-
-        assertThat(moved.id).isEqualTo("bullet-1")
-        assertThat(moved.headingX).isEqualTo(bullet.headingX)
-        assertThat(moved.headingY).isEqualTo(bullet.headingY)
-    }
-
-    @Test
-    fun `연속 move 호출 시 누적 이동한다`() {
-        val bullet = Bullet.create(
-            id = "bullet-1",
-            x = 0f,
-            y = 0f,
-            tx = 100f,
-            ty = 0f,
-        )
-
-        val movedTwice = bullet.move().move()
-
-        assertThat(movedTwice.x).isCloseTo(Bullet.SPEED * 2, offset)
-        assertThat(movedTwice.y).isCloseTo(0f, offset)
+            assertThat(bullet.isOnGround()).isFalse()
+        }
     }
 }
 

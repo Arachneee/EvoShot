@@ -8,6 +8,7 @@ class Bullets {
     private val idCounter = AtomicLong(0)
 
     fun createAndAdd(
+        ownerId: String,
         x: Float,
         y: Float,
         tx: Float,
@@ -16,6 +17,7 @@ class Bullets {
         val bullet =
             Bullet.create(
                 id = idCounter.incrementAndGet().toString(),
+                ownerId = ownerId,
                 x = x,
                 y = y,
                 tx = tx,
