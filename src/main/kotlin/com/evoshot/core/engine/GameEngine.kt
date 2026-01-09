@@ -50,7 +50,9 @@ class GameEngine {
     companion object {
         const val WORLD_WIDTH = 1600f
         const val WORLD_HEIGHT = 900f
-        private const val HIT_RADIUS = 10f
+        private const val PLAYER_RADIUS = 20f
+        private const val BULLET_RADIUS = 5f
+        private const val HIT_RADIUS = PLAYER_RADIUS + BULLET_RADIUS
         private const val HIT_RADIUS_SQUARED = HIT_RADIUS * HIT_RADIUS
     }
 }

@@ -27,7 +27,7 @@ data class Bullet private constructor(
     fun isOnGround(): Boolean = y >= Physics.GROUND_Y
 
     companion object {
-        const val SPEED: Float = 20f
+        const val SPEED: Float = 30f
 
         fun create(
             id: String,
