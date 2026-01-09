@@ -42,7 +42,7 @@ class Room private constructor(
         val hitResult = gameEngine.checkHits(alivePlayers, activeBullets)
 
         hitResult.hitPlayerIds.forEach { playerId ->
-            players.findById(playerId)?.kill()
+            players.findById(playerId)?.takeDamage()
         }
 
         val remainingBullets = activeBullets.filterNot { it.id in hitResult.hitBulletIds }

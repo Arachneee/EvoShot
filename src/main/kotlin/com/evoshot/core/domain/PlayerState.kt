@@ -13,8 +13,10 @@ data class PlayerState private constructor(
     override val x: Float,
     override val y: Float,
     val velocityY: Float = 0f,
-    val isAlive: Boolean = true,
+    val hp: Int = MAX_HP,
 ) : Positionable {
+    val isAlive: Boolean
+        get() = hp > 0
     val isOnGround: Boolean
         get() = y >= Physics.GROUND_Y
 
@@ -47,9 +49,13 @@ data class PlayerState private constructor(
         return copy(velocityY = Physics.JUMP_VELOCITY)
     }
 
-    fun killed(): PlayerState = copy(isAlive = false)
+    fun takeDamage(damage: Int = 1): PlayerState {
+        val newHp = (hp - damage).coerceAtLeast(0)
+        return if (newHp == hp) this else copy(hp = newHp)
+    }
 
     companion object {
+        const val MAX_HP: Int = 10
         const val SPEED: Float = 5f
         const val SPAWN_X_MIN: Int = 100
         const val SPAWN_X_MAX: Int = 1500
@@ -71,7 +77,7 @@ data class PlayerState private constructor(
             x: Float,
             y: Float,
             velocityY: Float = 0f,
-            isAlive: Boolean = true,
-        ): PlayerState = PlayerState(id, name, x, y, velocityY, isAlive)
+            hp: Int = MAX_HP,
+        ): PlayerState = PlayerState(id, name, x, y, velocityY, hp)
     }
 }

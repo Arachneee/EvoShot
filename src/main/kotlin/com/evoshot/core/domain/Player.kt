@@ -8,6 +8,7 @@ class Player private constructor(
     val name: String get() = state.name
     val x: Float get() = state.x
     val y: Float get() = state.y
+    val hp: Int get() = state.hp
     val isAlive: Boolean get() = state.isAlive
 
     private var inputDx: Int = 0
@@ -38,8 +39,8 @@ class Player private constructor(
         this.lastShootTime = currentTime
     }
 
-    fun kill() {
-        this.state = state.killed()
+    fun takeDamage(damage: Int = 1) {
+        this.state = state.takeDamage(damage)
     }
 
     fun toState(): PlayerState = state
@@ -65,11 +66,11 @@ class Player private constructor(
             x: Float,
             y: Float,
             velocityY: Float = 0f,
-            isAlive: Boolean = true,
+            hp: Int = PlayerState.MAX_HP,
         ): Player =
             Player(
                 sessionId,
-                PlayerState.createForTest(id, name, x, y, velocityY, isAlive),
+                PlayerState.createForTest(id, name, x, y, velocityY, hp),
             )
     }
 }

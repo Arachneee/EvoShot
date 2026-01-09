@@ -71,12 +71,29 @@ class PlayerTest {
     }
 
     @Test
-    fun `kill 호출 시 isAlive가 false가 된다`() {
+    fun `10번 피격 시 isAlive가 false가 된다`() {
         val player = Player.create(sessionId = "session-1", playerName = "홍길동")
 
-        player.kill()
+        repeat(10) { player.takeDamage() }
 
         assertThat(player.isAlive).isFalse()
+    }
+
+    @Test
+    fun `takeDamage 호출 시 hp가 1 감소한다`() {
+        val player = Player.create(sessionId = "session-1", playerName = "홍길동")
+        val initialHp = player.hp
+
+        player.takeDamage()
+
+        assertThat(player.hp).isEqualTo(initialHp - 1)
+    }
+
+    @Test
+    fun `Player 생성 시 hp가 최대값이다`() {
+        val player = Player.create(sessionId = "session-1", playerName = "홍길동")
+
+        assertThat(player.hp).isEqualTo(10)
     }
 }
 
