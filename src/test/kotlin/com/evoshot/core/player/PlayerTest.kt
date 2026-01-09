@@ -35,15 +35,14 @@ class PlayerTest {
     }
 
     @Test
-    fun `move 호출 시 위치가 변경된다`() {
+    fun `setInput과 applyInput 호출 시 위치가 변경된다`() {
         val player = Player.create(sessionId = "session-1", playerName = "홍길동")
         val initialX = player.x
-        val initialY = player.y
 
-        player.move(tx = initialX + 100f, ty = initialY + 100f)
+        player.setInput(dx = 1, jump = false)
+        player.applyInput()
 
         assertThat(player.x).isNotEqualTo(initialX)
-        assertThat(player.y).isNotEqualTo(initialY)
     }
 
     @Test
@@ -60,16 +59,15 @@ class PlayerTest {
     }
 
     @Test
-    fun `move 후 toState는 변경된 위치를 반환한다`() {
+    fun `applyInput 후 toState는 변경된 위치를 반환한다`() {
         val player = Player.create(sessionId = "session-1", playerName = "홍길동")
         val initialX = player.x
-        val initialY = player.y
 
-        player.move(tx = initialX + 100f, ty = initialY + 100f)
+        player.setInput(dx = 1, jump = false)
+        player.applyInput()
         val state = player.toState()
 
         assertThat(state.x).isNotEqualTo(initialX)
-        assertThat(state.y).isNotEqualTo(initialY)
     }
 
     @Test
